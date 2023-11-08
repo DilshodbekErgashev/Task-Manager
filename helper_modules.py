@@ -1,67 +1,79 @@
+from datetime import datetime
 from user import User
-from helper_modules import TaskManager
 from colorama import Fore, Style
-task_manager = TaskManager()
 
-print (Style.NORMAL+ Fore.GREEN +"                      Планер задач: уверенный шаг к успеху через эффективное планирование") 
-print (Style.NORMAL+ Fore.LIGHTWHITE_EX +"🔷🔹 1) Регистрация") 
-print(Style.NORMAL+ Fore.LIGHTWHITE_EX +"🔷🔹 2) Войти")
-print(Style.NORMAL+ Fore.LIGHTRED_EX +"🔷🔹 0) Выход")
+class TaskManager:
+    username = ''
 
-run = True
+    def register_user(self, username_, password):  # Убираем ненужный аргумент email
+        with open(f'{username_}.txt', 'a') as file:
+            file.write(f"{username_},{password}\n")
+            self.username = username_
 
-while run:
-   
-    number = input(Style.NORMAL+ Fore.LIGHTBLUE_EX +"✍  Что вас интересует? ")
+    def login_user(self, username_, password):
+        with open(f'{username_}.txt', 'r') as file:
+            for line in file:
+                user_info = line.strip().split(',')
+                if user_info[0] == username_ and user_info[1] == password:
+                    return User(username_, password)
+        return "Username or password is incorrect. Try again!"
+    
+    def add_task(self, username, title, description, due_date):
+        with open(f'{username}_tasks.txt', 'a') as file:
+            file.write(f"{title},{description},{due_date}")
 
-    if number == '1':
-        print(Style.NORMAL+ Fore.WHITE +"Регистрация пользователя")
-        username = input(Style.NORMAL+ Fore.CYAN +"Имя пользователя: ")
-        password = input(Style.NORMAL+ Fore.CYAN +"Пароль: ")
-        task_manager.register_user(username, password)
+    def delete_task(self, username, task_index):
+        with open(f'{username}_tasks.txt', 'r') as file:
+            tasks = file.readlines()
 
-    elif number == '2':
-        print(Style.NORMAL+ Fore.GREEN +"                 ⚡ Вход в систему")
-        username = input(Style.NORMAL+ Fore.CYAN +"Имя пользователя: ")
-        password = input(Style.NORMAL+ Fore.CYAN +"Пароль: ")
-        user = task_manager.login_user(username, password)
-        if isinstance(user, User):
+        if len(tasks) == 0:
+            print("Список задач пуст.")
+            return
 
-            print(Style.NORMAL+ Fore.GREEN +"                 ✅ Вход успешен             ")
-            print(Style.NORMAL+ Fore.WHITE +"🔷🔹 3) Добавить задачу                        ")
-            print(Style.NORMAL+ Fore.WHITE +"🔷🔹 4) Сортировать задачи по сроку выполнения ")
-            print(Style.NORMAL+ Fore.WHITE +"🔷🔹 5) Задачи на сегодня                      ")
-            print(Style.NORMAL+ Fore.WHITE +"🔷🔹 6) Удалить задачу                         ")
-            print(Style.BRIGHT+ Fore.LIGHTRED_EX +"🔷🔹 0) Выход                                  ")
+        with open(f'{username}_tasks.txt', 'w') as file:
+            for i, task in enumerate(tasks):
+                if i + 1 != task_index:
+                    file.write(task)
+                    
+    def view_tasks(self, username): 
+        with open(f'{username}_tasks.txt', 'r') as file: 
+            tasks = file.readlines()
+
+        if len(tasks) == 0:
+            print("Список задач пуст")
         else:
-            print(Style.NORMAL+ Fore.RED +"⚠️ Неправильное имя пользователя или пароль")
+            print(Style.NORMAL+ Fore.GREEN + "                                ✉︎  Список задач  ✉︎")
+            for i, task in enumerate(tasks):
+                details = task.split(",")
+                title = details[0]
+                description = details[1]
+                due_date = details[2]
+                
+                print(Style.NORMAL+ Fore.LIGHTWHITE_EX +f"{i + 1}. Заголовок: {title}")
+                print(Style.NORMAL+ Fore.LIGHTWHITE_EX +f"   Описание: {description}")
+                print(Style.NORMAL+ Fore.LIGHTWHITE_EX +f"   Срок выполнения: {due_date}")
+                print("")
 
-    elif number == '3':
-        print(Style.NORMAL+ Fore.GREEN + "                    ✅ Добавление задачи")
-        if user:
-            task = input(Style.NORMAL+ Fore.WHITE +"Задача: ")
-            description = input(Style.NORMAL+ Fore.WHITE +"Описание: ")
-            date = input(Style.NORMAL+ Fore.WHITE +"Дата (ГГГГ-ММ-ДД): ")
-            task_manager.add_task(user.username, task, description, date)
 
+    def sort_by_due_date(self):
+        def get_due_date(task):
+            return task.split(',')[2]
 
-    elif number == '4':
-        print(Style.NORMAL+ Fore.GREEN + "                        ✅ Сортировка задач по сроку выполнения")
-        with open(f'{user.username}_tasks.txt', 'r') as file:
-            sorted_tasks = file.readlines()
-        for task in sorted_tasks:
-            print(task)
+        tasks = []
+        with open(f'{self.username}_tasks.txt', 'r') as file:
+            tasks = [task.strip() for task in file.readlines()]
+        tasks.sort(key=get_due_date)
+        with open(f'{self.username}_tasks.txt', 'w') as file:
+            for task in tasks:
+                file.write(f'{task}\n')
 
-    elif number == '5':
-        print(Style.NORMAL+ Fore.GREEN + "                         ✅ Задачи на сегодня")
-        today_tasks = task_manager.get_today_tasks(user.username)
-        for task in today_tasks:
-            print(task)
-       
-    elif number == '6':
-        task_manager.view_tasks(user.username)
-        task_index = int(input(Style.NORMAL+ Fore.RED +"🔎 Введите индекс задачи, которую хотите удалить: "))
-        task_manager.delete_task(user.username, task_index)
-
-    elif number == '0':
-        run = False
+    def get_today_tasks(self, filename):
+        today_tasks = []
+        today = datetime.today().strftime('%Y-%m-%d')
+        with open(f'{filename}_tasks.txt', 'r') as file:
+            for line in file:
+                task_info = line.split(',')
+                due_date = task_info[2].strip()
+                if due_date == today:
+                    today_tasks.append(line)
+        return today_tasks
