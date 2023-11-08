@@ -5,7 +5,7 @@ from colorama import Fore, Style
 class TaskManager:
     username = ''
 
-    def register_user(self, username_, password):  # Убираем ненужный аргумент email
+    def register_user(self, username_, password):  
         with open(f'{username_}.txt', 'a') as file:
             file.write(f"{username_},{password}\n")
             self.username = username_
